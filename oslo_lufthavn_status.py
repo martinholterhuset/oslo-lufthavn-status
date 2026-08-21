@@ -31,6 +31,16 @@ DATAWRAPPER_CHART_ID_CANCELLED = os.environ.get("DATAWRAPPER_CHART_ID_CANCELLED"
 DIRECTION_LABELS = {"D": "Avgang", "A": "Ankomst"}
 STATE_FILE = Path(__file__).parent / "previous_summary.json"
 
+# Norsk månedsforkortelse i stedet for tall – uavhengig av systemets locale (f.eks. GitHub Actions-runneren).
+NORWEGIAN_MONTHS_ABBR = {
+    1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
+    7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des",
+}
+
+
+def format_norwegian_date(dt):
+    return f"{dt.day}. {NORWEGIAN_MONTHS_ABBR[dt.month]}"
+
 DATA_DIR = Path(__file__).parent / "data"
 AIRPORT_NAMES = json.loads((DATA_DIR / "airports.json").read_text(encoding="utf-8"))
 AIRLINE_NAMES = json.loads((DATA_DIR / "airlines.json").read_text(encoding="utf-8"))
@@ -201,7 +211,7 @@ def build_cancelled_csv(departures, arrivals):
         local_time = f["schedule_time"].astimezone(OSLO_TZ)
         writer.writerow(
             [
-                local_time.strftime("%d.%m %H:%M"),
+                f"{format_norwegian_date(local_time)} {local_time.strftime('%H:%M')}",
                 DIRECTION_LABELS[f["direction"]],
                 f["flight_id"],
                 airline_name(f["airline"]),
