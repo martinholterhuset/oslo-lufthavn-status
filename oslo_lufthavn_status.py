@@ -214,7 +214,12 @@ def push_to_datawrapper(chart_id, csv_data, notes):
     patch_response = requests.patch(
         base_url,
         headers=auth_header,
-        json={"metadata": {"annotate": {"notes": notes}}},
+        json={
+            "metadata": {
+                "annotate": {"notes": notes},
+                "describe": {"source-name": "Avinor", "source-url": "https://www.avinor.no/"},
+            }
+        },
         timeout=30,
     )
     patch_response.raise_for_status()
@@ -238,6 +243,7 @@ def main():
 
     now_local = datetime.now(OSLO_TZ)
     updated_at = now_local.strftime("%H:%M")
+    updated_at_dotted = now_local.strftime("%H.%M")
     updated_note = f"Sist oppdatert kl. {updated_at} (norsk tid)."
 
     history = load_history(now_local.date())
@@ -246,8 +252,8 @@ def main():
     push_to_datawrapper(
         DATAWRAPPER_CHART_ID,
         summary_csv,
-        'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen forsinkelsesmarkering for '
-        f"flyvningen. \"Endring\" viser utvikling siste time (▲ rødt = flere, ▼ grønt = færre). {updated_note}",
+        f"<b>Sist oppdatert klokka {updated_at_dotted} (norsk tid)</b><br>"
+        '"Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen. Endring viser utvikling siste time.',
     )
     print(f"Oppdatert oversikt kl. {updated_at} (norsk tid):\n{summary_csv}")
     save_state(now_local.date(), history, now_local, departures_summary, arrivals_summary)
