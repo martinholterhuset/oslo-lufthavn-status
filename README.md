@@ -1,6 +1,9 @@
 # Oslo lufthavn – status
 
-Tabell som viser dagens antall innstilte og forsinkede flyvninger (avganger og ankomster separat) for Oslo lufthavn, Gardermoen (OSL). Oppdateres automatisk hvert 30. minutt via GitHub Actions og pushes til en Datawrapper-tabell.
+To tabeller for Oslo lufthavn, Gardermoen (OSL), som begge oppdateres automatisk hvert 30. minutt via GitHub Actions:
+
+1. **Oversikt** – dagens antall innstilte og forsinkede flyvninger (avganger og ankomster separat)
+2. **Innstilte flyvninger** – liste over hver enkelt innstilte flyvning i dag (klokkeslett, retning, flight, selskap, flyplass)
 
 Data hentes fra Avinors gratis flydata-API (`https://asrv.avinor.no/XmlFeed/v1.0`). "Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen (samme som vises på flyplassens infoskjermer); "innstilt" er flyvninger med statuskode `C`.
 
@@ -13,11 +16,14 @@ Data hentes fra Avinors gratis flydata-API (`https://asrv.avinor.no/XmlFeed/v1.0
 1. Gå til [app.datawrapper.de/account/api-tokens](https://app.datawrapper.de/account/api-tokens)
 2. Opprett et nytt token med tilgang til å lese/skrive charts
 
-### 2. Opprett tabell-charten i Datawrapper
+### 2. Opprett tabell-chartene i Datawrapper
 
-1. Lag et nytt **Table**-chart i Datawrapper sitt UI (så du fritt kan style farger, kolonner, footer osv.)
-2. Legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Forsinket`)
-3. Noter chart-ID-en fra URL-en, f.eks. `https://app.datawrapper.de/chart/AbCdE/edit` → ID er `AbCdE`
+Lag to separate **Table**-charts i Datawrapper sitt UI (så du fritt kan style farger, kolonner, footer osv. for hver):
+
+1. **Oversikt** – legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Forsinket`)
+2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Klokkeslett,Retning,Flight,Selskap,Flyplass`)
+
+Noter chart-ID-en for hver fra URL-en, f.eks. `https://app.datawrapper.de/chart/AbCdE/edit` → ID er `AbCdE`
 
 ### 3. Legg til GitHub Secrets
 
@@ -25,8 +31,9 @@ Gå til **Settings → Secrets and variables → Actions** i repoet og legg til:
 
 | Secret | Beskrivelse |
 |---|---|
-| `DATAWRAPPER_API_TOKEN` | Token fra steg 1 |
-| `DATAWRAPPER_CHART_ID` | Chart-ID fra steg 2 |
+| `DATAWRAPPER_API_TOKEN` | Token fra steg 1 (husk scopes: Chart read+write, Theme read, Visualization read – kreves for publisering) |
+| `DATAWRAPPER_CHART_ID` | Chart-ID for oversikts-tabellen |
+| `DATAWRAPPER_CHART_ID_CANCELLED` | Chart-ID for listen over innstilte flyvninger |
 
 ### 4. Push repoet til GitHub
 
@@ -62,7 +69,8 @@ Kjører automatisk hvert 30. minutt (`*/30 * * * *`) via GitHub Actions – uavh
 ```
 GitHub Actions (cron hver 30. min)
     └── oslo_lufthavn_status.py
-         ├── fetch_flights("D"/"A")  → Avinor XmlFeed for dagens avganger/ankomster
-         ├── build_csv()             → Retning, Totalt antall, Innstilt, Forsinket
-         └── push_to_datawrapper()   → PUT data + PATCH footer-notat + POST publish
+         ├── fetch_flights("D"/"A")     → Avinor XmlFeed for dagens avganger/ankomster
+         ├── build_summary_csv()        → Retning, Totalt antall, Innstilt, Forsinket
+         ├── build_cancelled_csv()      → Klokkeslett, Retning, Flight, Selskap, Flyplass
+         └── push_to_datawrapper(...)   → PUT data + PATCH footer-notat + POST publish (per chart)
 ```

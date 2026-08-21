@@ -22,4 +22,5 @@ jobs:
         env:
           DATAWRAPPER_API_TOKEN: ${{ secrets.DATAWRAPPER_API_TOKEN }}
           DATAWRAPPER_CHART_ID: ${{ secrets.DATAWRAPPER_CHART_ID }}
+          DATAWRAPPER_CHART_ID_CANCELLED: ${{ secrets.DATAWRAPPER_CHART_ID_CANCELLED }}
         run: python oslo_lufthavn_status.py

@@ -23,6 +23,9 @@ OSLO_TZ = ZoneInfo("Europe/Oslo")
 
 DATAWRAPPER_API_TOKEN = os.environ["DATAWRAPPER_API_TOKEN"]
 DATAWRAPPER_CHART_ID = os.environ["DATAWRAPPER_CHART_ID"]
+DATAWRAPPER_CHART_ID_CANCELLED = os.environ.get("DATAWRAPPER_CHART_ID_CANCELLED")
+
+DIRECTION_LABELS = {"D": "Avgang", "A": "Ankomst"}
 
 
 def fetch_flights(direction):
@@ -56,7 +59,17 @@ def fetch_flights(direction):
         status_code = status.get("code") if status is not None else None
         cancelled = status_code == "C"
         delayed = not cancelled and flight.findtext("delayed") == "Y"
-        flights.append({"cancelled": cancelled, "delayed": delayed})
+        flights.append(
+            {
+                "cancelled": cancelled,
+                "delayed": delayed,
+                "direction": direction,
+                "flight_id": flight.findtext("flight_id") or "",
+                "airline": flight.findtext("airline") or "",
+                "other_airport": flight.findtext("airport") or "",
+                "schedule_time": schedule_time,
+            }
+        )
 
     return flights
 
@@ -68,7 +81,7 @@ def summarize(flights):
     return total, cancelled, delayed
 
 
-def build_csv(departures, arrivals):
+def build_summary_csv(departures, arrivals):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["Retning", "Totalt antall", "Innstilt", "Forsinket"])
@@ -77,9 +90,29 @@ def build_csv(departures, arrivals):
     return output.getvalue()
 
 
-def push_to_datawrapper(csv_data, updated_at):
+def build_cancelled_csv(departures, arrivals):
+    cancelled_flights = [f for f in departures + arrivals if f["cancelled"]]
+    cancelled_flights.sort(key=lambda f: f["schedule_time"])
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Klokkeslett", "Retning", "Flight", "Selskap", "Flyplass"])
+    for f in cancelled_flights:
+        writer.writerow(
+            [
+                f["schedule_time"].astimezone(OSLO_TZ).strftime("%H:%M"),
+                DIRECTION_LABELS[f["direction"]],
+                f["flight_id"],
+                f["airline"],
+                f["other_airport"],
+            ]
+        )
+    return output.getvalue()
+
+
+def push_to_datawrapper(chart_id, csv_data, notes):
     auth_header = {"Authorization": f"Bearer {DATAWRAPPER_API_TOKEN}"}
-    base_url = f"https://api.datawrapper.de/v3/charts/{DATAWRAPPER_CHART_ID}"
+    base_url = f"https://api.datawrapper.de/v3/charts/{chart_id}"
 
     data_response = requests.put(
         f"{base_url}/data",
@@ -89,10 +122,6 @@ def push_to_datawrapper(csv_data, updated_at):
     )
     data_response.raise_for_status()
 
-    notes = (
-        'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen '
-        f"forsinkelsesmarkering for flyvningen. Sist oppdatert kl. {updated_at} (norsk tid)."
-    )
     patch_response = requests.patch(
         base_url,
         headers=auth_header,
@@ -118,11 +147,32 @@ def main():
         )
         sys.exit(1)
 
-    csv_data = build_csv(departures, arrivals)
     updated_at = datetime.now(OSLO_TZ).strftime("%H:%M")
-    push_to_datawrapper(csv_data, updated_at)
+    updated_note = f"Sist oppdatert kl. {updated_at} (norsk tid)."
 
-    print(f"Oppdatert kl. {updated_at} (norsk tid):\n{csv_data}")
+    summary_csv = build_summary_csv(departures, arrivals)
+    push_to_datawrapper(
+        DATAWRAPPER_CHART_ID,
+        summary_csv,
+        'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen '
+        f"forsinkelsesmarkering for flyvningen. {updated_note}",
+    )
+    print(f"Oppdatert oversikt kl. {updated_at} (norsk tid):\n{summary_csv}")
+
+    if DATAWRAPPER_CHART_ID_CANCELLED:
+        cancelled_csv = build_cancelled_csv(departures, arrivals)
+        push_to_datawrapper(
+            DATAWRAPPER_CHART_ID_CANCELLED,
+            cancelled_csv,
+            f"Kilde: Flydata fra Avinor. {updated_note}",
+        )
+        print(f"Oppdatert liste over innstilte flyvninger:\n{cancelled_csv}")
+    else:
+        print(
+            "DATAWRAPPER_CHART_ID_CANCELLED er ikke satt – hopper over oppdatering av "
+            "listen over innstilte flyvninger.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":
