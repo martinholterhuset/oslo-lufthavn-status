@@ -62,14 +62,14 @@ python oslo_lufthavn_status.py
 
 ## Tidsplan
 
-Kjører automatisk hvert 30. minutt (`*/30 * * * *`) via GitHub Actions – uavhengig av om denne maskinen er på. Kan også trigges manuelt fra **Actions**-fanen i GitHub (`workflow_dispatch`).
+Kjører automatisk hvert 30. minutt, kl. :07 og :37 (`7,37 * * * *`) via GitHub Actions – uavhengig av om denne maskinen er på. Tidspunktene er lagt utenom hel/halv time siden GitHub Actions kø-forsinker cron-jobber mest akkurat da (mange andre repos trigger også på `:00`/`:30`). Kan også trigges manuelt fra **Actions**-fanen i GitHub (`workflow_dispatch`).
 
 ---
 
 ## Arkitektur
 
 ```
-GitHub Actions (cron hver 30. min)
+GitHub Actions (cron kl. :07 og :37)
     ├── Last ned previous_summary.json (artifact "flydata-state" fra forrige kjøring)
     ├── oslo_lufthavn_status.py
     │    ├── fetch_flights("D"/"A")        → Avinor XmlFeed for dagens avganger/ankomster

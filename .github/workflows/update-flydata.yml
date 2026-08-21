@@ -2,7 +2,9 @@ name: Oppdater Oslo lufthavn-status
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # Kjører kl. :07 og :37 i stedet for :00/:30 – GitHub Actions kø-forsinker cron-jobber mest
+    # rundt hel/halv time siden så mange andre repos også trigger da.
+    - cron: '7,37 * * * *'
   workflow_dispatch:
 
 jobs:
