@@ -58,6 +58,7 @@ AIRLINE_NAME_OVERRIDES = {
     "RK": "Ryanair UK",
     "EZY": "easyJet",
     "KLJ": "KlasJet",
+    "SK": "SAS",
 }
 
 
