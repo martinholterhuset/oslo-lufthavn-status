@@ -28,6 +28,7 @@ DATAWRAPPER_CHART_ID = os.environ["DATAWRAPPER_CHART_ID"]
 DATAWRAPPER_CHART_ID_CANCELLED = os.environ.get("DATAWRAPPER_CHART_ID_CANCELLED")
 
 DIRECTION_LABELS = {"D": "Avgang", "A": "Ankomst"}
+STATE_FILE = Path(__file__).parent / "previous_summary.json"
 
 DATA_DIR = Path(__file__).parent / "data"
 AIRPORT_NAMES = json.loads((DATA_DIR / "airports.json").read_text(encoding="utf-8"))
@@ -106,16 +107,64 @@ def summarize(flights):
     total = len(flights)
     cancelled = sum(1 for f in flights if f["cancelled"])
     delayed = sum(1 for f in flights if f["delayed"])
-    return total, cancelled, delayed
+    return {"total": total, "cancelled": cancelled, "delayed": delayed}
 
 
-def build_summary_csv(departures, arrivals):
+def load_previous_state(today_local):
+    """Les forrige kjørings tall, men bare hvis de er fra samme dag (tallene nullstilles hver dag)."""
+    if not STATE_FILE.exists():
+        return None
+    try:
+        state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if state.get("date") != today_local.isoformat():
+        return None
+    return state
+
+
+def save_state(today_local, departures_summary, arrivals_summary):
+    state = {
+        "date": today_local.isoformat(),
+        "avganger": departures_summary,
+        "ankomster": arrivals_summary,
+    }
+    STATE_FILE.write_text(json.dumps(state), encoding="utf-8")
+
+
+def format_delta(current, previous):
+    if previous is None:
+        return "–"
+    diff = current - previous
+    if diff > 0:
+        return f"+{diff}"
+    if diff < 0:
+        return str(diff)
+    return "±0"
+
+
+def build_summary_csv(departures, arrivals, previous_state):
+    departures_summary = summarize(departures)
+    arrivals_summary = summarize(arrivals)
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Retning", "Totalt antall", "Innstilt", "Forsinket"])
-    for label, flights in (("Avganger", departures), ("Ankomster", arrivals)):
-        writer.writerow([label, *summarize(flights)])
-    return output.getvalue()
+    writer.writerow(
+        ["Retning", "Totalt antall", "Innstilt", "Endring innstilt", "Forsinket", "Endring forsinket"]
+    )
+    for label, key, summary in (("Avganger", "avganger", departures_summary), ("Ankomster", "ankomster", arrivals_summary)):
+        previous = previous_state.get(key) if previous_state else None
+        writer.writerow(
+            [
+                label,
+                summary["total"],
+                summary["cancelled"],
+                format_delta(summary["cancelled"], previous["cancelled"] if previous else None),
+                summary["delayed"],
+                format_delta(summary["delayed"], previous["delayed"] if previous else None),
+            ]
+        )
+    return output.getvalue(), departures_summary, arrivals_summary
 
 
 def build_cancelled_csv(departures, arrivals):
@@ -175,17 +224,20 @@ def main():
         )
         sys.exit(1)
 
-    updated_at = datetime.now(OSLO_TZ).strftime("%H:%M")
+    now_local = datetime.now(OSLO_TZ)
+    updated_at = now_local.strftime("%H:%M")
     updated_note = f"Sist oppdatert kl. {updated_at} (norsk tid)."
 
-    summary_csv = build_summary_csv(departures, arrivals)
+    previous_state = load_previous_state(now_local.date())
+    summary_csv, departures_summary, arrivals_summary = build_summary_csv(departures, arrivals, previous_state)
     push_to_datawrapper(
         DATAWRAPPER_CHART_ID,
         summary_csv,
-        'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen '
-        f"forsinkelsesmarkering for flyvningen. {updated_note}",
+        'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen forsinkelsesmarkering for '
+        f"flyvningen. \"Endring\" viser utvikling siden forrige oppdatering. {updated_note}",
     )
     print(f"Oppdatert oversikt kl. {updated_at} (norsk tid):\n{summary_csv}")
+    save_state(now_local.date(), departures_summary, arrivals_summary)
 
     if DATAWRAPPER_CHART_ID_CANCELLED:
         cancelled_csv = build_cancelled_csv(departures, arrivals)

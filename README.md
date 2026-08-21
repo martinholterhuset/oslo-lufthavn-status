@@ -2,7 +2,7 @@
 
 To tabeller for Oslo lufthavn, Gardermoen (OSL), som begge oppdateres automatisk hvert 30. minutt via GitHub Actions:
 
-1. **Oversikt** – dagens antall innstilte og forsinkede flyvninger (avganger og ankomster separat)
+1. **Oversikt** – dagens antall innstilte og forsinkede flyvninger (avganger og ankomster separat), med egne kolonner som viser endring siden forrige oppdatering
 2. **Innstilte flyvninger** – liste over hver enkelt innstilte flyvning i dag (klokkeslett, retning, flight, selskap, flyplass)
 
 Data hentes fra Avinors gratis flydata-API (`https://asrv.avinor.no/XmlFeed/v1.0`). "Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen (samme som vises på flyplassens infoskjermer); "innstilt" er flyvninger med statuskode `C`.
@@ -22,7 +22,7 @@ Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er sl�
 
 Lag to separate **Table**-charts i Datawrapper sitt UI (så du fritt kan style farger, kolonner, footer osv. for hver):
 
-1. **Oversikt** – legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Forsinket`)
+1. **Oversikt** – legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Endring innstilt,Forsinket,Endring forsinket`)
 2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Klokkeslett,Retning,Flight,Selskap,Flyplass`)
 
 Noter chart-ID-en for hver fra URL-en, f.eks. `https://app.datawrapper.de/chart/AbCdE/edit` → ID er `AbCdE`
@@ -70,10 +70,15 @@ Kjører automatisk hvert 30. minutt (`*/30 * * * *`) via GitHub Actions – uavh
 
 ```
 GitHub Actions (cron hver 30. min)
-    └── oslo_lufthavn_status.py
-         ├── fetch_flights("D"/"A")     → Avinor XmlFeed for dagens avganger/ankomster
-         ├── airport_name()/airline_name() → slår opp fulle navn via data/*.json (+ overrides)
-         ├── build_summary_csv()        → Retning, Totalt antall, Innstilt, Forsinket
-         ├── build_cancelled_csv()      → Klokkeslett, Retning, Flight, Selskap, Flyplass
-         └── push_to_datawrapper(...)   → PUT data + PATCH footer-notat + POST publish (per chart)
+    ├── Last ned previous_summary.json (artifact "flydata-state" fra forrige kjøring)
+    ├── oslo_lufthavn_status.py
+    │    ├── fetch_flights("D"/"A")        → Avinor XmlFeed for dagens avganger/ankomster
+    │    ├── airport_name()/airline_name() → slår opp fulle navn via data/*.json (+ overrides)
+    │    ├── build_summary_csv()           → Retning, Totalt antall, Innstilt, Endring innstilt, Forsinket, Endring forsinket
+    │    ├── build_cancelled_csv()         → Klokkeslett, Retning, Flight, Selskap, Flyplass
+    │    ├── push_to_datawrapper(...)      → PUT data + PATCH footer-notat + POST publish (per chart)
+    │    └── save_state()                  → skriver previous_summary.json for neste kjøring
+    └── Last opp previous_summary.json som artifact "flydata-state"
 ```
+
+"Endring"-kolonnene nullstilles automatisk ved midnatt (norsk tid), siden `previous_summary.json` inneholder dagens dato og ignoreres hvis den er fra en tidligere dag.

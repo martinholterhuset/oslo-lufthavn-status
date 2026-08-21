@@ -8,8 +8,18 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Last ned forrige tilstand
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          name: flydata-state
+          path: .
+          if_no_artifact_found: ignore
 
       - uses: actions/setup-python@v5
         with:
@@ -24,3 +34,13 @@ jobs:
           DATAWRAPPER_CHART_ID: ${{ secrets.DATAWRAPPER_CHART_ID }}
           DATAWRAPPER_CHART_ID_CANCELLED: ${{ secrets.DATAWRAPPER_CHART_ID_CANCELLED }}
         run: python oslo_lufthavn_status.py
+
+      - name: Lagre tilstand for neste kjøring
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flydata-state
+          path: previous_summary.json
+          retention-days: 7
+          overwrite: true
+          if-no-files-found: ignore
