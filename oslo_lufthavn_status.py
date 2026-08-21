@@ -4,6 +4,7 @@ import io
 import json
 import math
 import os
+import re
 import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -49,8 +50,18 @@ AIRLINE_NAME_OVERRIDES = {
 }
 
 
+def shorten_airport_name(name):
+    """Fjerner "Airport"/"International Airport" for å holde Flyplass-kolonnen smal."""
+    name = re.sub(r"\bInternational Airport\b", "", name)
+    name = re.sub(r"\bAirport\b", "", name)
+    name = re.sub(r"\s{2,}", " ", name)
+    name = re.sub(r"\s+,", ",", name)
+    return name.strip(" ,")
+
+
 def airport_name(code):
-    return AIRPORT_NAME_OVERRIDES.get(code) or AIRPORT_NAMES.get(code) or code
+    name = AIRPORT_NAME_OVERRIDES.get(code) or AIRPORT_NAMES.get(code) or code
+    return shorten_airport_name(name)
 
 
 def airline_name(code):
