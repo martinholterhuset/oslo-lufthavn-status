@@ -23,7 +23,7 @@ Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er sl�
 Lag to separate **Table**-charts i Datawrapper sitt UI (så du fritt kan style farger, kolonner, footer osv. for hver):
 
 1. **Oversikt** – legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Endring innstilt (1t),Forsinket,Endring forsinket (1t)`). Skru på **Parse markdown** for denne charten under **Refine → Customize table** – det er det som gjør at de fargede pil-cellene (`<span style="color:...">`) rendres som farget tekst i stedet for rå HTML.
-2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Tid,Retning,Flight,Selskap,Flyplass`, der `Tid` er `dd.mm.åååå tt:mm`)
+2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Tid,Retning,Flight,Selskap,Flyplass`, der `Tid` er `dd.mm tt:mm`)
 
 Noter chart-ID-en for hver fra URL-en, f.eks. `https://app.datawrapper.de/chart/AbCdE/edit` → ID er `AbCdE`
 

@@ -201,7 +201,7 @@ def build_cancelled_csv(departures, arrivals):
         local_time = f["schedule_time"].astimezone(OSLO_TZ)
         writer.writerow(
             [
-                local_time.strftime("%d.%m.%Y %H:%M"),
+                local_time.strftime("%d.%m %H:%M"),
                 DIRECTION_LABELS[f["direction"]],
                 f["flight_id"],
                 airline_name(f["airline"]),
