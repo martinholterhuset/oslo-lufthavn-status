@@ -23,7 +23,7 @@ Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er sl�
 Lag to separate **Table**-charts i Datawrapper sitt UI (så du fritt kan style farger, kolonner, footer osv. for hver):
 
 1. **Oversikt** – legg inn en midlertidig CSV manuelt første gang (kolonner: `Retning,Totalt antall,Innstilt,Endring innstilt (1t),Forsinket,Endring forsinket (1t)`). Skru på **Parse markdown** for denne charten under **Refine → Customize table** – det er det som gjør at de fargede pil-cellene (`<span style="color:...">`) rendres som farget tekst i stedet for rå HTML.
-2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Tid,Retning,Flight,Selskap,Flyplass`, der `Tid` er `d. måned tt:mm`, f.eks. `21. august 07:40`)
+2. **Innstilte flyvninger** – legg inn en midlertidig CSV manuelt (kolonner: `Dato,Klokkeslett,Retning,Flight,Selskap,Flyplass`, der `Dato` er `d. måned` f.eks. `21. august`, og `Klokkeslett` er `tt:mm`)
 
 Noter chart-ID-en for hver fra URL-en, f.eks. `https://app.datawrapper.de/chart/AbCdE/edit` → ID er `AbCdE`
 
@@ -75,7 +75,7 @@ GitHub Actions (cron hver 30. min)
     │    ├── fetch_flights("D"/"A")        → Avinor XmlFeed for dagens avganger/ankomster
     │    ├── airport_name()/airline_name() → slår opp fulle navn via data/*.json (+ overrides)
     │    ├── build_summary_csv()           → Retning, Totalt antall, Innstilt, Endring innstilt (1t), Forsinket, Endring forsinket (1t)
-    │    ├── build_cancelled_csv()         → Tid, Retning, Flight, Selskap, Flyplass
+    │    ├── build_cancelled_csv()         → Dato, Klokkeslett, Retning, Flight, Selskap, Flyplass
     │    ├── push_to_datawrapper(...)      → PUT data + PATCH footer-notat + POST publish (per chart)
     │    └── save_state()                  → skriver previous_summary.json for neste kjøring
     └── Last opp previous_summary.json som artifact "flydata-state"

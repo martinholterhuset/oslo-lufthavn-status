@@ -241,12 +241,13 @@ def build_cancelled_csv(departures, arrivals):
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Tid", "Retning", "Flight", "Selskap", "Flyplass"])
+    writer.writerow(["Dato", "Klokkeslett", "Retning", "Flight", "Selskap", "Flyplass"])
     for f in cancelled_flights:
         local_time = f["schedule_time"].astimezone(OSLO_TZ)
         writer.writerow(
             [
-                f"{format_norwegian_date(local_time)} {local_time.strftime('%H:%M')}",
+                format_norwegian_date(local_time),
+                local_time.strftime("%H:%M"),
                 DIRECTION_LABELS[f["direction"]],
                 f["flight_id"],
                 airline_name(f["airline"]),
