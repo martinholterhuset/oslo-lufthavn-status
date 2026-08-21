@@ -43,7 +43,8 @@ AIRPORT_NAME_OVERRIDES = {
     "FDE": {"name": "Førde Airport, Bringeland", "city": "Førde"},
 }
 AIRLINE_NAME_OVERRIDES = {
-    "D8": "Norwegian Air Sweden",
+    "D8": "Norwegian",
+    "DY": "Norwegian",
     "DK": "Sunclass Airlines",
     "RK": "Ryanair UK",
     "EZY": "easyJet",
