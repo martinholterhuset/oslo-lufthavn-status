@@ -102,6 +102,8 @@ def push_to_datawrapper(csv_data, updated_at):
     patch_response.raise_for_status()
 
     publish_response = requests.post(f"{base_url}/publish", headers=auth_header, timeout=30)
+    if not publish_response.ok:
+        print(f"Datawrapper publish feilet ({publish_response.status_code}): {publish_response.text}", file=sys.stderr)
     publish_response.raise_for_status()
 
 
