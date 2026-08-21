@@ -110,25 +110,37 @@ def summarize(flights):
     return {"total": total, "cancelled": cancelled, "delayed": delayed}
 
 
-def load_previous_state(today_local):
-    """Les forrige kjørings tall, men bare hvis de er fra samme dag (tallene nullstilles hver dag)."""
+def load_history(today_local):
+    """Les historikk over tidligere kjøringer i dag (nullstilles ved midnatt)."""
     if not STATE_FILE.exists():
-        return None
+        return []
     try:
         state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return None
+        return []
     if state.get("date") != today_local.isoformat():
+        return []
+    return state.get("history", [])
+
+
+def find_snapshot_one_hour_ago(history, now_local):
+    """Finn den nyeste historikk-snapshoten som er minst én time gammel."""
+    target = now_local - timedelta(hours=1)
+    candidates = [h for h in history if datetime.fromisoformat(h["time"]) <= target]
+    if not candidates:
         return None
-    return state
+    return max(candidates, key=lambda h: h["time"])
 
 
-def save_state(today_local, departures_summary, arrivals_summary):
-    state = {
-        "date": today_local.isoformat(),
-        "avganger": departures_summary,
-        "ankomster": arrivals_summary,
-    }
+def save_state(today_local, history, now_local, departures_summary, arrivals_summary):
+    new_history = history + [
+        {
+            "time": now_local.isoformat(),
+            "avganger": departures_summary,
+            "ankomster": arrivals_summary,
+        }
+    ]
+    state = {"date": today_local.isoformat(), "history": new_history}
     STATE_FILE.write_text(json.dumps(state), encoding="utf-8")
 
 
@@ -137,23 +149,23 @@ def format_delta(current, previous):
         return "–"
     diff = current - previous
     if diff > 0:
-        return f"+{diff}"
+        return f'<span style="color:#c0392b">▲ +{diff}</span>'
     if diff < 0:
-        return str(diff)
-    return "±0"
+        return f'<span style="color:#27ae60">▼ {diff}</span>'
+    return '<span style="color:#999999">± 0</span>'
 
 
-def build_summary_csv(departures, arrivals, previous_state):
+def build_summary_csv(departures, arrivals, previous_snapshot):
     departures_summary = summarize(departures)
     arrivals_summary = summarize(arrivals)
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        ["Retning", "Totalt antall", "Innstilt", "Endring innstilt", "Forsinket", "Endring forsinket"]
+        ["Retning", "Totalt antall", "Innstilt", "Endring innstilt (1t)", "Forsinket", "Endring forsinket (1t)"]
     )
     for label, key, summary in (("Avganger", "avganger", departures_summary), ("Ankomster", "ankomster", arrivals_summary)):
-        previous = previous_state.get(key) if previous_state else None
+        previous = previous_snapshot.get(key) if previous_snapshot else None
         writer.writerow(
             [
                 label,
@@ -228,16 +240,17 @@ def main():
     updated_at = now_local.strftime("%H:%M")
     updated_note = f"Sist oppdatert kl. {updated_at} (norsk tid)."
 
-    previous_state = load_previous_state(now_local.date())
-    summary_csv, departures_summary, arrivals_summary = build_summary_csv(departures, arrivals, previous_state)
+    history = load_history(now_local.date())
+    previous_snapshot = find_snapshot_one_hour_ago(history, now_local)
+    summary_csv, departures_summary, arrivals_summary = build_summary_csv(departures, arrivals, previous_snapshot)
     push_to_datawrapper(
         DATAWRAPPER_CHART_ID,
         summary_csv,
         'Kilde: Flydata fra Avinor. "Forsinket" er Avinors egen forsinkelsesmarkering for '
-        f"flyvningen. \"Endring\" viser utvikling siden forrige oppdatering. {updated_note}",
+        f"flyvningen. \"Endring\" viser utvikling siste time (▲ rødt = flere, ▼ grønt = færre). {updated_note}",
     )
     print(f"Oppdatert oversikt kl. {updated_at} (norsk tid):\n{summary_csv}")
-    save_state(now_local.date(), departures_summary, arrivals_summary)
+    save_state(now_local.date(), history, now_local, departures_summary, arrivals_summary)
 
     if DATAWRAPPER_CHART_ID_CANCELLED:
         cancelled_csv = build_cancelled_csv(departures, arrivals)
