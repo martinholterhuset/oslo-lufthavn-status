@@ -7,7 +7,7 @@ To tabeller for Oslo lufthavn, Gardermoen (OSL), som begge oppdateres automatisk
 
 Data hentes fra Avinors gratis flydata-API (`https://asrv.avinor.no/XmlFeed/v1.0`). "Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen (samme som vises på flyplassens infoskjermer); "innstilt" er flyvninger med statuskode `C`.
 
-Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er slått opp fra [OpenFlights](https://openflights.org/data.php) sin database (ODbL-lisens), med noen få manuelle rettelser i `AIRPORT_NAME_OVERRIDES`/`AIRLINE_NAME_OVERRIDES` i scriptet der kildedataene var utdaterte (f.eks. gjenbrukte IATA-koder som D8, DK, RK).
+Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er slått opp fra [OpenFlights](https://openflights.org/data.php) sin database (ODbL-lisens), med noen få manuelle rettelser i `AIRPORT_NAME_OVERRIDES`/`AIRLINE_NAME_OVERRIDES` i scriptet der kildedataene var utdaterte (f.eks. gjenbrukte IATA-koder som D8, DK, RK). For å holde "Flyplass"-kolonnen smal fjerner `airport_name()` også "Airport"/"International Airport" og byen/stedsnavnet (f.eks. "Bergen Airport Flesland" → "Flesland"); hvis flyplassen ikke har noe eget navn utover byen, beholdes byen (f.eks. "Kristiansand").
 
 ---
 

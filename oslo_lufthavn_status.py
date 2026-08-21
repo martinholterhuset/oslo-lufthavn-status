@@ -6,6 +6,7 @@ import math
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
@@ -48,8 +49,8 @@ AIRLINE_NAMES = json.loads((DATA_DIR / "airlines.json").read_text(encoding="utf-
 # Rettelser for koder der kildedataene (OpenFlights, sist oppdatert ~2017-2019) er
 # utdaterte eller feil – bekreftet manuelt mot dagens IATA-tildeling.
 AIRPORT_NAME_OVERRIDES = {
-    "BER": "Berlin Brandenburg Airport",
-    "FDE": "Førde Airport, Bringeland",
+    "BER": {"name": "Berlin Brandenburg Airport", "city": "Berlin"},
+    "FDE": {"name": "Førde Airport, Bringeland", "city": "Førde"},
 }
 AIRLINE_NAME_OVERRIDES = {
     "D8": "Norwegian Air Sweden",
@@ -58,6 +59,18 @@ AIRLINE_NAME_OVERRIDES = {
     "EZY": "easyJet",
     "KLJ": "KlasJet",
 }
+
+
+# Bokstaver som IKKE dekomponeres av unicodedata.normalize("NFKD", ...) (i motsetning til f.eks. å/é/ü),
+# så de må erstattes manuelt, én-til-én, for at lengden skal stemme ved sammenligning mot original streng.
+NON_DECOMPOSING_LETTERS = str.maketrans(
+    {"ø": "o", "Ø": "O", "æ": "a", "Æ": "A", "ß": "s", "đ": "d", "Đ": "D", "ł": "l", "Ł": "L"}
+)
+
+
+def strip_diacritics(text):
+    text = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return text.translate(NON_DECOMPOSING_LETTERS)
 
 
 def shorten_airport_name(name):
@@ -69,9 +82,30 @@ def shorten_airport_name(name):
     return name.strip(" ,")
 
 
+def strip_city(name, city):
+    """Fjerner byen/stedsnavnet fra flyplassnavnet, og beholder bare flyplassens egennavn."""
+    if not city:
+        return name
+    normalized_name = strip_diacritics(name).lower()
+    normalized_city = strip_diacritics(city).lower()
+
+    remainder = None
+    if normalized_name.startswith(normalized_city):
+        remainder = name[len(city):]
+    elif normalized_name.endswith(normalized_city):
+        remainder = name[: len(name) - len(city)]
+
+    if remainder is None:
+        return name
+
+    remainder = remainder.strip(" -,()")
+    return remainder or name
+
+
 def airport_name(code):
-    name = AIRPORT_NAME_OVERRIDES.get(code) or AIRPORT_NAMES.get(code) or code
-    return shorten_airport_name(name)
+    entry = AIRPORT_NAME_OVERRIDES.get(code) or AIRPORT_NAMES.get(code) or {"name": code, "city": ""}
+    name = shorten_airport_name(entry["name"])
+    return strip_city(name, entry["city"])
 
 
 def airline_name(code):
