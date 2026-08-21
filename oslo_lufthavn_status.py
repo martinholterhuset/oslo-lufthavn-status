@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import csv
 import io
+import json
 import math
 import os
 import sys
+from pathlib import Path
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -26,6 +28,32 @@ DATAWRAPPER_CHART_ID = os.environ["DATAWRAPPER_CHART_ID"]
 DATAWRAPPER_CHART_ID_CANCELLED = os.environ.get("DATAWRAPPER_CHART_ID_CANCELLED")
 
 DIRECTION_LABELS = {"D": "Avgang", "A": "Ankomst"}
+
+DATA_DIR = Path(__file__).parent / "data"
+AIRPORT_NAMES = json.loads((DATA_DIR / "airports.json").read_text(encoding="utf-8"))
+AIRLINE_NAMES = json.loads((DATA_DIR / "airlines.json").read_text(encoding="utf-8"))
+
+# Rettelser for koder der kildedataene (OpenFlights, sist oppdatert ~2017-2019) er
+# utdaterte eller feil – bekreftet manuelt mot dagens IATA-tildeling.
+AIRPORT_NAME_OVERRIDES = {
+    "BER": "Berlin Brandenburg Airport",
+    "FDE": "Førde Airport, Bringeland",
+}
+AIRLINE_NAME_OVERRIDES = {
+    "D8": "Norwegian Air Sweden",
+    "DK": "Sunclass Airlines",
+    "RK": "Ryanair UK",
+    "EZY": "easyJet",
+    "KLJ": "KlasJet",
+}
+
+
+def airport_name(code):
+    return AIRPORT_NAME_OVERRIDES.get(code) or AIRPORT_NAMES.get(code) or code
+
+
+def airline_name(code):
+    return AIRLINE_NAME_OVERRIDES.get(code) or AIRLINE_NAMES.get(code) or code
 
 
 def fetch_flights(direction):
@@ -103,8 +131,8 @@ def build_cancelled_csv(departures, arrivals):
                 f["schedule_time"].astimezone(OSLO_TZ).strftime("%H:%M"),
                 DIRECTION_LABELS[f["direction"]],
                 f["flight_id"],
-                f["airline"],
-                f["other_airport"],
+                airline_name(f["airline"]),
+                airport_name(f["other_airport"]),
             ]
         )
     return output.getvalue()

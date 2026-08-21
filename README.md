@@ -7,6 +7,8 @@ To tabeller for Oslo lufthavn, Gardermoen (OSL), som begge oppdateres automatisk
 
 Data hentes fra Avinors gratis flydata-API (`https://asrv.avinor.no/XmlFeed/v1.0`). "Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen (samme som vises på flyplassens infoskjermer); "innstilt" er flyvninger med statuskode `C`.
 
+Flyplass- og flyselskapsnavn (`data/airports.json`, `data/airlines.json`) er slått opp fra [OpenFlights](https://openflights.org/data.php) sin database (ODbL-lisens), med noen få manuelle rettelser i `AIRPORT_NAME_OVERRIDES`/`AIRLINE_NAME_OVERRIDES` i scriptet der kildedataene var utdaterte (f.eks. gjenbrukte IATA-koder som D8, DK, RK).
+
 ---
 
 ## Oppsett
@@ -70,6 +72,7 @@ Kjører automatisk hvert 30. minutt (`*/30 * * * *`) via GitHub Actions – uavh
 GitHub Actions (cron hver 30. min)
     └── oslo_lufthavn_status.py
          ├── fetch_flights("D"/"A")     → Avinor XmlFeed for dagens avganger/ankomster
+         ├── airport_name()/airline_name() → slår opp fulle navn via data/*.json (+ overrides)
          ├── build_summary_csv()        → Retning, Totalt antall, Innstilt, Forsinket
          ├── build_cancelled_csv()      → Klokkeslett, Retning, Flight, Selskap, Flyplass
          └── push_to_datawrapper(...)   → PUT data + PATCH footer-notat + POST publish (per chart)
