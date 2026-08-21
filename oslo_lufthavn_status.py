@@ -244,21 +244,21 @@ def main():
     now_local = datetime.now(OSLO_TZ)
     updated_at = now_local.strftime("%H:%M")
     updated_at_dotted = now_local.strftime("%H.%M")
-    notes = (
+    notes_base = (
         f"<b>Sist oppdatert klokka {updated_at_dotted} (norsk tid)</b><br>"
-        '"Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen. Endring viser utvikling siste time.'
+        '"Forsinket" er Avinors egen forsinkelsesmarkering for flyvningen.'
     )
 
     history = load_history(now_local.date())
     previous_snapshot = find_snapshot_one_hour_ago(history, now_local)
     summary_csv, departures_summary, arrivals_summary = build_summary_csv(departures, arrivals, previous_snapshot)
-    push_to_datawrapper(DATAWRAPPER_CHART_ID, summary_csv, notes)
+    push_to_datawrapper(DATAWRAPPER_CHART_ID, summary_csv, notes_base + " Endring viser utvikling siste time.")
     print(f"Oppdatert oversikt kl. {updated_at} (norsk tid):\n{summary_csv}")
     save_state(now_local.date(), history, now_local, departures_summary, arrivals_summary)
 
     if DATAWRAPPER_CHART_ID_CANCELLED:
         cancelled_csv = build_cancelled_csv(departures, arrivals)
-        push_to_datawrapper(DATAWRAPPER_CHART_ID_CANCELLED, cancelled_csv, notes)
+        push_to_datawrapper(DATAWRAPPER_CHART_ID_CANCELLED, cancelled_csv, notes_base)
         print(f"Oppdatert liste over innstilte flyvninger:\n{cancelled_csv}")
     else:
         print(
