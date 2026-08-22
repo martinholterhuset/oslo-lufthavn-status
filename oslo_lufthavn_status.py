@@ -45,6 +45,7 @@ AIRPORT_NAME_OVERRIDES = {
 AIRLINE_NAME_OVERRIDES = {
     "D8": "Norwegian",
     "DY": "Norwegian",
+    "KL": "KLM",
     "DK": "Sunclass Airlines",
     "RK": "Ryanair UK",
     "EZY": "easyJet",
